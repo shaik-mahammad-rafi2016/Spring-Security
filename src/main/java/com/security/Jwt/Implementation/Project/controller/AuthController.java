@@ -1,9 +1,11 @@
 package com.security.Jwt.Implementation.Project.controller;
 
 
+import com.security.Jwt.Implementation.Project.dto.AuthResponse;
 import com.security.Jwt.Implementation.Project.dto.LoginRequest;
 import com.security.Jwt.Implementation.Project.dto.RegisterRequest;
 import com.security.Jwt.Implementation.Project.entity.User;
+import com.security.Jwt.Implementation.Project.security.service.JwtService;
 import com.security.Jwt.Implementation.Project.service.UserService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -13,6 +15,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import jakarta.validation.Valid;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -21,10 +24,12 @@ public class AuthController {
 
     private final UserService userService;
     private final AuthenticationManager authenticationManager;
+    private final JwtService jwtService;
 
-    public AuthController(UserService userService,AuthenticationManager authenticationManager) {
+    public AuthController(UserService userService,AuthenticationManager authenticationManager,JwtService jwtService) {
         this.userService = userService;
         this.authenticationManager = authenticationManager;
+        this.jwtService = jwtService;
     }
 
 
@@ -40,16 +45,22 @@ public class AuthController {
 
     }
     @PostMapping("/login")
-    public ResponseEntity<String> login(
+    public ResponseEntity<AuthResponse> login(
             @Valid @RequestBody LoginRequest request) {
 
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                        request.getUsername(),
-                        request.getPassword()
-                )
-        );
+        Authentication authentication =
+                authenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken(
+                                request.getUsername(),
+                                request.getPassword()
+                        )
+                );
 
-        return ResponseEntity.ok("Login successful");
+        String token = jwtService.generateToken(authentication);
+
+        AuthResponse response =
+                new AuthResponse(token, "Bearer", 3600);
+
+        return ResponseEntity.ok(response);
     }
 }
